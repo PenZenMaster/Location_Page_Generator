@@ -1,0 +1,26 @@
+# Ignore Python cache and environment junk
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.env
+*.venv
+.env
+.venv/
+
+# Ignore input/output and logs
+input/locations.csv
+output/
+logs/
+*.log
+
+# Ignore system/IDE metadata
+.DS_Store
+.vscode/
+.idea/
+*.swp
+
+# Ignore temporary build/testing files
+*.bak
+*.tmp
+*.old

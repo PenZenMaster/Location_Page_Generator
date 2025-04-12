@@ -1,11 +1,36 @@
-# page_generator.py
+# location_page_generator.py
+
+"""
+Module/Script Name: location_page_generator.py
+
+Description:
+Generates fully optimized, HTML-based local service pages from CSV input.
+Supports dynamic niche content, image/map embeds, and scalable WordPress deployment.
+
+Author(s):
+Skippy the Magnificent with an eensy weensy bit of help from that filthy monkey, Big G
+
+Created Date:
+2025-04-12
+
+Last Modified Date:
+2025-04-12
+
+Comments:
+- Version 1.03: Now loads Google Maps API key from .env file using dotenv.
+"""
 
 import os
 import csv
 from slugify import slugify
 from jinja2 import Template
+import urllib.parse
+from dotenv import load_dotenv
 
-# Define your HTML template (load from a separate file or embed inline for now)
+# Load environment variables from .env
+load_dotenv()
+GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
 HTML_TEMPLATE = """
 <!-- {{ location }} Location Page – {{ business_name }} -->
 
@@ -42,27 +67,53 @@ Email: <a href="mailto:{{ email }}">{{ email }}</a><br>
 Address: <a href="{{ hq_map_url }}" target="_blank">{{ hq_address }}</a></p>
 """
 
-# Sample services list
-DEFAULT_SERVICES = [
-    "Full exterior repaints",
-    "Trim, fascia, shutters, and doors",
-    "Deck and porch painting or staining",
-    "Color consultation",
-    "Historic restoration or modern upgrades",
-]
+
+def parse_services(service_str):
+    return [s.strip() for s in service_str.split("|") if s.strip()]
 
 
-# Main generator function
+def build_google_map_embed(location):
+    q = urllib.parse.quote(location)
+    return f"https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_API_KEY}&q={q}"
+
+
+def build_google_directions_embed(start, end):
+    origin = urllib.parse.quote(start)
+    destination = urllib.parse.quote(end)
+    return f"https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_API_KEY}&origin={origin}&destination={destination}"
+
+
+def build_wikipedia_image_embed(city):
+    safe_city = city.split(",")[0].strip().replace(" ", "_")
+    image_url = f"https://upload.wikimedia.org/wikipedia/commons/thumb/1/1d/{safe_city}.jpg/1280px-{safe_city}.jpg"
+    source_url = f"https://commons.wikimedia.org/wiki/File:{safe_city}.jpg"
+    return image_url, source_url, f"Wikimedia Commons, {safe_city}.jpg"
+
+
 def generate_location_page(row):
     focus_keyword = row["Primary Focus Keyword"]
-    location = row["Location"]
+    location = row["Location (City,State)"]
     phone = row["Phone"]
     email = row["Email"]
     business_name = row["Business Name"]
     hq_address = row["HQ Address"]
+    service_str = row.get("Service List", "")
+    services = parse_services(service_str) or [
+        "Full exterior repaints",
+        "Trim, fascia, shutters, and doors",
+        "Deck and porch painting or staining",
+        "Color consultation",
+        "Historic restoration or modern upgrades",
+    ]
 
     page_title = f"{focus_keyword} in {location}"
     slug = slugify(location)
+
+    map_embed_url = build_google_map_embed(location)
+    directions_embed_url = build_google_directions_embed(location, hq_address)
+    image_embed_url, image_source_url, image_attribution = build_wikipedia_image_embed(
+        location
+    )
 
     template = Template(HTML_TEMPLATE)
     html_output = template.render(
@@ -73,16 +124,16 @@ def generate_location_page(row):
         email=email,
         hq_address=hq_address,
         hq_map_url="https://goo.gl/maps/kD8T7YAkzEv6GQbC8",
-        map_embed_url="https://www.google.com/maps/embed?...",  # placeholder
-        directions_embed_url="https://www.google.com/maps/embed?...",  # placeholder
-        image_embed_url="https://upload.wikimedia.org/...jpg",  # placeholder
-        image_source_url="https://commons.wikimedia.org/wiki/...",  # placeholder
-        image_attribution="Photographer, CC License, via Wikimedia Commons",
+        map_embed_url=map_embed_url,
+        directions_embed_url=directions_embed_url,
+        image_embed_url=image_embed_url,
+        image_source_url=image_source_url,
+        image_attribution=image_attribution,
         intro_paragraph=f"Professional {focus_keyword.lower()} with guaranteed reliability and clean, lasting results.",
         why_us_paragraph="Our proven process includes power washing, priming, and expert application using top-tier materials.",
-        local_paragraph=f"Enjoy local favorites in {location} while we handle the hard work—like coffee downtown or time in the park.",
+        local_paragraph=f"Explore the best of {location} while we work—grab coffee, visit parks, and come back to a refreshed home exterior.",
         cta_paragraph=f"Looking for {focus_keyword.lower()} you can trust in {location}? Let's talk!",
-        services=DEFAULT_SERVICES,
+        services=services,
     )
 
     output_path = os.path.join("output", f"{slug}.html")
@@ -91,7 +142,6 @@ def generate_location_page(row):
     print(f"✅ Generated: {output_path}")
 
 
-# Load CSV and process each row
 def run():
     with open("input/locations.csv", newline="", encoding="utf-8") as csvfile:
         reader = csv.DictReader(csvfile)
