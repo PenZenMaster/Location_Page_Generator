@@ -58,6 +58,8 @@ def generate_location_page(row):
     location = row["Location"]
     phone = row["Phone"]
     email = row["Email"]
+    business_name = row["Business Name"]
+    hq_address = row["HQ Address"]
 
     page_title = f"{focus_keyword} in {location}"
     slug = slugify(location)
@@ -65,11 +67,11 @@ def generate_location_page(row):
     template = Template(HTML_TEMPLATE)
     html_output = template.render(
         page_title=page_title,
-        business_name="Shades of WHITE LLC",
+        business_name=business_name,
         location=location,
         phone=phone,
         email=email,
-        hq_address="13 N Washington St, Ypsilanti, MI 48197",
+        hq_address=hq_address,
         hq_map_url="https://goo.gl/maps/kD8T7YAkzEv6GQbC8",
         map_embed_url="https://www.google.com/maps/embed?...",  # placeholder
         directions_embed_url="https://www.google.com/maps/embed?...",  # placeholder
